@@ -1,1 +1,1 @@
-# gwas-qc-nf
+# GWAS-qc-nf
