@@ -2,17 +2,8 @@
 
 bedBimFamPublishDir = (params.bedbimfam == null ? "$params.output/bed-bim-fam" : params.bedbimfam)
 
-def toPrefixTuple = { file -> tuple(file.name.take(file.name.lastIndexOf('.')), file) }
+def toPrefixTuple = { file -> tuple(file.name.take(file.name.lastIndexOf('.')), file.toRealPath()) }
 def flatGroupTuple = { it -> tuple(it[0], *it[1].sort()) }
-def toBedBimFamTuple = { fileSetTuple -> 
-    def fileSetId = fileSetTuple[0]
-    return [
-        fileSetId, 
-        "$bedBimFamPublishDir/${fileSetId}.bed",
-        "$bedBimFamPublishDir/${fileSetId}.bim",
-        "$bedBimFamPublishDir/${fileSetId}.fam"
-    ]
-}
 
 mapPeds = Channel.fromFilePairs("${params.mapped}/*.{map,ped}", flat: true)
 
@@ -39,7 +30,7 @@ Channel
     .map(toPrefixTuple)
     .groupTuple()
     .map(flatGroupTuple) 
-    .concat(convertedBedBimFams.map(toBedBimFamTuple))
+    .concat(convertedBedBimFams)
     .unique { it[0] }
     .into { bedBimFams; debugBedBimFams }
 
