@@ -1,7 +1,9 @@
+ROOT_DIR=/home/dev/Code
 datetime=$(date -d "today" +"%Y%m%d%H%M")
 NX_CONFIG=nextflow.config
-LOG_DIR=logs/${datetime}
-WORK_DIR=works/
+LOG_DIR=${ROOT_DIR}/logs/${datetime}
+WORK_DIR=${ROOT_DIR}/works/
+DATA_DIR=${ROOT_DIR}/.data
 
 mkdir -p $LOG_DIR
 
@@ -13,8 +15,8 @@ nextflow -log $LOG_DIR/.nextflow.log \
   -with-report ${LOG_DIR}/report.html \
   -with-dag ${LOG_DIR}/flowchart.svg \
   -with-timeline ${LOG_DIR}/timeline.html \
-  --mapped .data/map-ped \
-  --bedbimfam .data/bed-bim-fam \
-  --output .data/ \
+  --mapped ${DATA_DIR}/map-ped \
+  --bedbimfam ${DATA_DIR}/bed-bim-fam \
+  --output $DATA_DIR \
   "${@:2}"
 
