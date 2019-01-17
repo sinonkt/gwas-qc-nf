@@ -1,0 +1,3 @@
+datasetPool,poolPath
+RGD101,.data/map-ped/
+TEST101,.data/bed-bim-fam/

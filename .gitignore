@@ -1,7 +1,8 @@
 ### Nextflow Ignored ###
-.data
+data
 logs
 works
+work
 .nextflow
 
 #### joe made this: http://goel.io/joe

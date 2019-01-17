@@ -1,12 +1,48 @@
 #!/usr/bin/env nextflow
-
-def toPrefixTuple = { file -> tuple(file.name.take(file.name.lastIndexOf('.')), file.toRealPath()) }
-def flatGroupTuple = { it -> tuple(it[0], *it[1].sort()) }
+// ******************** Start Params *********************
+params.inputCSV = 'input.csv' // vcf, vcf.gz, bed_bim_fam, already_by_chromosome (every format has chromosome awareness)
+params.publishDir = "publish"
+// ******************** End Params *********************
+// ****************** Start Helpers *****************
 
 mapPeds = Channel.fromFilePairs("${params.mapped}/*.{map,ped}", flat: true)
 bedBimFamPublishDir = (params.bedbimfam == null ? "$params.output/bed-bim-fam" : params.bedbimfam)
 sexDiscordancePublishDir = "$params.output/sex-discordance"
 imissHetPublishDir = "$params.output/imiss-het"
+
+def VALID_CHROMOSOMES=[ *(1..22), 'X', 'Y', 'MT']
+def AVAILABLE_EXTENSIONS=['vcf.gz', 'vcf', 'bed', 'bim', 'fam']
+def CHECK_CHROMOSOME_PATTERN = ~/.*chr(X|Y|MT|\d*).*/
+ChannelByFileType = [ 
+  'bed-bim-fam': [ channelIdx: 0, extPattern: ~/\.(bed|bim|fam)$/ ],
+  'map-ped': [ channelIdx: 1, extPattern: ~/\.(map|ped)$/ ],
+]
+def checkDataSetFileType = { files -> 
+  for (fileType in ['bed-bim-fam', 'vcf', 'vcf-gz']) {
+    if (files.any { file -> file =~ ChannelByFileType[fileType].extPattern })
+      return fileType
+  }
+  throw new Exception("Empty directory or dataset file extension mismatch."); 
+}
+def toDataSet = {
+    it.datasetPool
+    it.poolPath
+    dirs = file("${it.poolPath}/*", type='dir')
+}
+
+Channel
+    .from(file(params.inputCSV).text)
+    .splitCsv(header: true)
+    .map(toDataSet)
+    .println()
+
+MapPeds = Channel.create()
+BedBimFams = Channel.create()
+Channel
+    .from(file(params.inputCSV).text)
+    .splitCsv(header: true)
+    .flatMap(toDataSet)
+    .choice (BedBimFams, MapPeds) { ChannelByFileType[it.datasetFileType].channelIdx }
 
 process convertBedBimFam {
     publishDir bedBimFamPublishDir
@@ -162,3 +198,23 @@ imissHetsFails.subscribe {
 //     println "${workflow.scriptId}, ${workflow.commitId}, ${workflow.sessionId}"
 //     println "${workflow.projectDir}, ${workflow.runName}, ${workflow.workDir}"
 // }
+
+
+// // def VALID_CHROMOSOMES=[ *(1..22), 'X', 'Y', 'MT']
+// // def AVAILABLE_EXTENSIONS=['vcf.gz', 'vcf', 'bed', 'bim', 'fam']
+// // def CHECK_CHROMOSOME_PATTERN = ~/.*chr(X|Y|MT|\d*).*/
+// // ChannelByFileType = [ 
+// //   'bed-bim-fam': [ channelIdx: 0, extPattern: ~/\.(bed|bim|fam)$/ ],
+// //   'vcf': [ channelIdx: 1, extPattern: ~/\.vcf$/ ],
+// //   'vcf-gz': [ channelIdx: 2, extPattern: ~/\.vcf.gz$/ ]
+// // ]
+// // def checkDataSetFileType = { files -> 
+// //   for (fileType in ['bed-bim-fam', 'vcf', 'vcf-gz']) {
+// //     if (files.any { file -> file =~ ChannelByFileType[fileType].extPattern })
+// //       return fileType
+// //   }
+// //   throw new Exception("Empty directory or dataset file extension mismatch."); 
+// // }
+
+// // def toPrefixTuple = { file -> tuple(file.name.take(file.name.lastIndexOf('.')), file.toRealPath()) }
+// // def flatGroupTuple = { it -> tuple(it[0], *it[1].sort()) }
